@@ -6,12 +6,6 @@ const server = http.createServer(function(request, response) {
   //     console.log(files);
   //   });
 
-  //   if (fs.existsSync("./public" + request.url)) {
-  //       //file exists
-  //   } else {
-  //     // file does not exist
-  //   }
-
   // GET REQUESTS
   if (request.method === "GET") {
     console.log(request.method + " " + request.url);
@@ -24,6 +18,7 @@ const server = http.createServer(function(request, response) {
           response.writeHead(404, { "Content-type": "text/html" });
           response.write(data);
           response.end();
+          console.log(request.url + " does not exist");
         }
       });
     } else {
@@ -62,6 +57,35 @@ const server = http.createServer(function(request, response) {
         });
       }
     }
+  }
+
+  // POST REQUESTS
+  //   if (request.method === "POST") {
+  //     console.log(request.method + " " + request.url);
+  //     let body = "";
+  //     request.on("data", function(data) {
+  //       body += data;
+  //       console.log("Partial body: " + body);
+  //     });
+  //     request.on("end", function() {
+  //       console.log("Body: " + body);
+  //       response.writeHead(200, { "Content-Type": "text/html" });
+  //       response.end("post received");
+  //     });
+
+  if (request.method === "POST") {
+    console.log(request.method + " " + request.url);
+    request.on("data", function(data) {
+      let body = data.toString();
+
+      request.on("end", function() {
+        response.writeHead(200, { "Content-Type": "text/html" });
+        response.end();
+      });
+
+      // CREATE FILE AND POPULATE WITH FORM DATA
+      console.log(body);
+    });
   }
 });
 
