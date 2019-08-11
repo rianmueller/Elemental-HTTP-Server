@@ -14,13 +14,22 @@ const server = http.createServer(function(request, response) {
           response.end();
         }
       });
-    }
-    if (request.url === "/css/styles.css") {
+    } else if (request.url === "/css/styles.css") {
       fs.readFile("./public/css/styles.css", function(error, data) {
         if (error) {
           console.log("REQUEST " + request.url + " ERROR");
         } else {
           response.writeHead(200, { "Content-type": "text/css" });
+          response.write(data);
+          response.end();
+        }
+      });
+    } else if (request.url) {
+      fs.readFile("./public" + request.url, function(error, data) {
+        if (error) {
+          console.log("REQUEST " + request.url + " ERROR");
+        } else {
+          response.writeHead(200, { "Content-type": "text/html" });
           response.write(data);
           response.end();
         }
