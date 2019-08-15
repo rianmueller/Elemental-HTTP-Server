@@ -76,15 +76,54 @@ const server = http.createServer(function(request, response) {
   if (request.method === "POST") {
     console.log(request.method + " " + request.url);
     request.on("data", function(data) {
-      let body = data.toString();
+      // Parse the POST data
+      let formDataObject = {};
+      let formDataArray = data.toString().split("&");
+      for (let i in formDataArray) {
+        let keys = formDataArray[i].split("=");
+        formDataObject[keys[0]] = keys[1];
+      }
+
+      // Create new file and populate with POST data
+      let newElement = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>The Elements - ${formDataObject["elementName"]}</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <h1>${formDataObject["elementName"]}</h1>
+    <h2>${formDataObject["elementSymbol"]}</h2>
+    <h3>Atomic number ${formDataObject["elementAtomicNumber"]}</h3>
+    <p>
+      ${formDataObject["elementDescription"]}
+    </p>
+    <p><a href="/">back</a></p>
+  </body>
+</html>
+`;
+      fs.writeFile(
+        "./public/" + formDataObject["elementName"].toLowerCase() + ".html",
+        newElement,
+        function(error) {
+          if (error) throw error;
+          console.log("File created successfully");
+        }
+      );
+
+      // Update index.html
+      // Load index.html into a variable
+      let index = fs.readFile("./public/index.html", function(error) {
+        if (error) throw error;
+      });
+
+      console.log(index);
 
       request.on("end", function() {
         response.writeHead(200, { "Content-Type": "text/html" });
         response.end();
       });
-
-      // CREATE FILE AND POPULATE WITH FORM DATA
-      console.log(body);
     });
   }
 });
