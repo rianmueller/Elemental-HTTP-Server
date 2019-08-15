@@ -60,19 +60,6 @@ const server = http.createServer(function(request, response) {
   }
 
   // POST REQUESTS
-  //   if (request.method === "POST") {
-  //     console.log(request.method + " " + request.url);
-  //     let body = "";
-  //     request.on("data", function(data) {
-  //       body += data;
-  //       console.log("Partial body: " + body);
-  //     });
-  //     request.on("end", function() {
-  //       console.log("Body: " + body);
-  //       response.writeHead(200, { "Content-Type": "text/html" });
-  //       response.end("post received");
-  //     });
-
   if (request.method === "POST") {
     console.log(request.method + " " + request.url);
     request.on("data", function(data) {
@@ -84,7 +71,7 @@ const server = http.createServer(function(request, response) {
         formDataObject[keys[0]] = keys[1];
       }
 
-      // Create new file and populate with POST data
+      // Create new HTML file and populate with POST data
       let newElement = `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -113,12 +100,32 @@ const server = http.createServer(function(request, response) {
       );
 
       // Update index.html
-      // Load index.html into a variable
-      let index = fs.readFile("./public/index.html", function(error) {
-        if (error) throw error;
-      });
 
-      console.log(index);
+      fs.readFile("./public/index.html", function(error, data) {
+        if (error) throw error;
+        let indexHTML = data.toString();
+        // console.log(indexHTML);
+        if (indexHTML.search(formDataObject["elementName"]) === -1) {
+          let updatedIndexHTML = indexHTML.replace(
+            "</ol>",
+            `  <li>
+        <a href="/${formDataObject["elementName"].toLowerCase()}.html">${
+              formDataObject["elementName"]
+            }</a>
+      </li>
+    </ol>`
+          );
+          // console.log(updatedIndexHTML);
+          fs.writeFile("./public/index.html", updatedIndexHTML, function(
+            error
+          ) {
+            if (error) throw error;
+            console.log("index.html updated successfully");
+          });
+        } else {
+          console.log("index.html no update needed");
+        }
+      });
 
       request.on("end", function() {
         response.writeHead(200, { "Content-Type": "text/html" });
