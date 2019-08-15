@@ -61,7 +61,6 @@ const server = http.createServer(function(request, response) {
 
   // POST REQUESTS
   if (request.method === "POST") {
-    console.log(request.method + " " + request.url);
     request.on("data", function(data) {
       // Parse the POST data
       let formDataObject = {};
@@ -103,10 +102,12 @@ const server = http.createServer(function(request, response) {
 
       fs.readFile("./public/index.html", function(error, data) {
         if (error) throw error;
+
+        // copy file to memory
         let indexHTML = data.toString();
-        // console.log(indexHTML);
         if (indexHTML.search(formDataObject["elementName"]) === -1) {
-          let updatedIndexHTML = indexHTML.replace(
+          // add element to end of list
+          let addedElement = indexHTML.replace(
             "</ol>",
             `  <li>
         <a href="/${formDataObject["elementName"].toLowerCase()}.html">${
@@ -115,20 +116,32 @@ const server = http.createServer(function(request, response) {
       </li>
     </ol>`
           );
-          // console.log(updatedIndexHTML);
-          fs.writeFile("./public/index.html", updatedIndexHTML, function(
-            error
-          ) {
+
+          // update the count of elements
+          let split = addedElement.split("\n");
+          split.splice(10, 1);
+          let join = split.join("\n").replace(
+            "</h2>",
+            `</h2>
+    <h3>There are ${addedElement.split("<li>").length - 1}</h3>`
+          );
+
+          // update index.html
+          fs.writeFile("./public/index.html", join, function(error) {
             if (error) throw error;
             console.log("index.html updated successfully");
           });
         } else {
-          console.log("index.html no update needed");
+          console.log("index.html already updated with element");
         }
       });
 
       request.on("end", function() {
-        response.writeHead(200, { "Content-Type": "text/html" });
+        response.writeHead(
+          200,
+          { "Content-Type": "application/json" },
+          { success: "true" }
+        );
         response.end();
       });
     });
