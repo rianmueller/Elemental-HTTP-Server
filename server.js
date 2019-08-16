@@ -60,6 +60,9 @@ const server = http.createServer(function(request, response) {
   }
 
   // POST REQUESTS
+
+  // need to prevent submitting "404" or "index" as elementName
+
   if (request.method === "POST") {
     request.on("data", function(data) {
       // Parse the POST data
@@ -68,6 +71,13 @@ const server = http.createServer(function(request, response) {
       for (let i in formDataArray) {
         let keys = formDataArray[i].split("=");
         formDataObject[keys[0]] = keys[1];
+      }
+
+      if (
+        formDataObject["elementName"].toLowerCase() === "index" ||
+        formDataObject["elementName"].toLowerCase() === "404"
+      ) {
+        formDataObject["elementName"] = "invalidName";
       }
 
       // Create new HTML file and populate with POST data
@@ -126,7 +136,7 @@ const server = http.createServer(function(request, response) {
     <h3>There are ${addedElement.split("<li>").length - 1}</h3>`
           );
 
-          // update index.html
+          // write to index.html
           fs.writeFile("./public/index.html", join, function(error) {
             if (error) throw error;
             console.log("index.html updated successfully");
@@ -137,12 +147,9 @@ const server = http.createServer(function(request, response) {
       });
 
       request.on("end", function() {
-        response.writeHead(
-          200,
-          { "Content-Type": "application/json" },
-          { success: "true" }
-        );
-        response.end();
+        response.writeHead(200, { "Content-Type": "application/json" });
+        const responseBody = { success: "true" };
+        response.end(JSON.stringify(responseBody));
       });
     });
   }
