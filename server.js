@@ -66,7 +66,6 @@ const server = http.createServer(function(request, response) {
       // Parse the POST data
       let formDataObject = {};
       let formDataArray = data.toString().split("&");
-      console.log(formDataArray);
 
       for (let i in formDataArray) {
         let keys = formDataArray[i].split("=");
@@ -74,7 +73,13 @@ const server = http.createServer(function(request, response) {
       }
       if (!formDataObject["elementName"]) {
         console.log("Missing elementName");
-        throw error;
+        request.on("end", function() {
+          response.writeHead(500, { "Content-Type": "application/json" });
+          let responseBody = {
+            error: "Missing elementName"
+          };
+          response.end(JSON.stringify(responseBody));
+        });
       } else {
         if (
           formDataObject["elementName"].toLowerCase() === "index" ||
@@ -160,9 +165,127 @@ const server = http.createServer(function(request, response) {
 
   if (request.method === "PUT") {
     // same behavior as POST except
-    // 1) Require all fields
-    // 2) Do not create a file but respond with 500 if path does not exist
-    // 3)
+    // 1) Accept request paths to existing element files
+    // 2) If path does not exist, do not create a file but respond with 500
+
+    request.on("data", function(data) {
+      console.log(request.method + " " + request.url);
+
+      // Parse the PUT data
+      let formDataObject = {};
+      let formDataArray = data.toString().split("&");
+      console.log(formDataArray);
+
+      for (let i in formDataArray) {
+        let keys = formDataArray[i].split("=");
+        formDataObject[keys[0]] = keys[1];
+      }
+      console.log(formDataObject);
+      console.log("./public" + request.url);
+      console.log(
+        "./public/" + formDataObject["elementName"].toLowerCase() + ".html"
+      );
+
+      // File must exist
+      if (!fs.existsSync("./public" + request.url)) {
+        console.log("resource " + request.url + " does not exist");
+        request.on("end", function() {
+          response.writeHead(500, { "Content-Type": "application/json" });
+          let responseBody = {
+            error: "resource " + request.url + " does not exist"
+          };
+          response.end(JSON.stringify(responseBody));
+        });
+        // File name must match element name
+      } else if (
+        "./public" + request.url !==
+        "./public/" + formDataObject["elementName"].toLowerCase() + ".html"
+      ) {
+        console.log(
+          "resource " +
+            request.url +
+            " and element name " +
+            formDataObject["elementName"].toLowerCase() +
+            ".html" +
+            " do not match"
+        );
+        request.on("end", function() {
+          response.writeHead(500, { "Content-Type": "application/json" });
+          let responseBody = {
+            error:
+              "resource " +
+              request.url +
+              " and element name " +
+              formDataObject["elementName"].toLowerCase() +
+              ".html" +
+              " do not match"
+          };
+          response.end(JSON.stringify(responseBody));
+        });
+        // All input fields must be populated
+      } else if (
+        !formDataObject["elementName"] ||
+        !formDataObject["elementSymbol"] ||
+        !formDataObject["elementAtomicNumber"] ||
+        !formDataObject["elementDescription"]
+      ) {
+        console.log("Missing one or more values");
+        request.on("end", function() {
+          response.writeHead(500, { "Content-Type": "application/json" });
+          let responseBody = {
+            error: "Missing one or more values"
+          };
+          response.end(JSON.stringify(responseBody));
+        });
+        // File name must not be index or 404
+      } else if (
+        formDataObject["elementName"] === "index" ||
+        formDataObject["elementName"] === "404"
+      ) {
+        console.log("Invalid elementName");
+        request.on("end", function() {
+          response.writeHead(500, { "Content-Type": "application/json" });
+          let responseBody = {
+            error: "Invalid elementName"
+          };
+          response.end(JSON.stringify(responseBody));
+        });
+        // Create new HTML file and populate with POST data
+      } else {
+        let newElement = `<!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <title>The Elements - ${formDataObject["elementName"]}</title>
+      <link rel="stylesheet" href="/css/styles.css" />
+    </head>
+    <body>
+      <h1>${formDataObject["elementName"]}</h1>
+      <h2>${formDataObject["elementSymbol"]}</h2>
+      <h3>Atomic number ${formDataObject["elementAtomicNumber"]}</h3>
+      <p>
+        ${formDataObject["elementDescription"]}
+      </p>
+      <p><a href="/">back</a></p>
+    </body>
+  </html>
+  `;
+        fs.writeFile(
+          "./public/" + formDataObject["elementName"].toLowerCase() + ".html",
+          newElement,
+          function(error) {
+            if (error) throw error;
+            console.log("File created successfully");
+          }
+        );
+
+        request.on("end", function() {
+          response.writeHead(200, { "Content-Type": "application/json" });
+          let responseBody = { success: "true" };
+          response.end(JSON.stringify(responseBody));
+        });
+      }
+    });
   }
 });
 
