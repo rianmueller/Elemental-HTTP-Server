@@ -163,28 +163,20 @@ const server = http.createServer(function(request, response) {
     });
   }
 
-  if (request.method === "PUT") {
-    // same behavior as POST except
-    // 1) Accept request paths to existing element files
-    // 2) If path does not exist, do not create a file but respond with 500
+  // PUT requests
 
+  if (request.method === "PUT") {
     request.on("data", function(data) {
       console.log(request.method + " " + request.url);
 
       // Parse the PUT data
       let formDataObject = {};
       let formDataArray = data.toString().split("&");
-      console.log(formDataArray);
 
       for (let i in formDataArray) {
         let keys = formDataArray[i].split("=");
         formDataObject[keys[0]] = keys[1];
       }
-      console.log(formDataObject);
-      console.log("./public" + request.url);
-      console.log(
-        "./public/" + formDataObject["elementName"].toLowerCase() + ".html"
-      );
 
       // File must exist
       if (!fs.existsSync("./public" + request.url)) {
@@ -286,6 +278,90 @@ const server = http.createServer(function(request, response) {
         });
       }
     });
+  }
+
+  // DELETE requests
+
+  if (request.method === "DELETE") {
+    console.log(request.method + " " + request.url);
+
+    // File must exist
+    if (!fs.existsSync("./public" + request.url)) {
+      console.log("resource " + request.url + " does not exist");
+      request.on("end", function() {
+        response.writeHead(500, { "Content-Type": "application/json" });
+        let responseBody = {
+          error: "resource " + request.url + " does not exist"
+        };
+        response.end(JSON.stringify(responseBody));
+      });
+      // File must be user-created
+    } else if (
+      request.url === "/index.html" ||
+      request.url === "/404.html" ||
+      request.url === "/css/styles.css"
+    ) {
+      console.log("resource " + request.url + " cannot be deleted");
+      request.on("end", function() {
+        response.writeHead(500, { "Content-Type": "application/json" });
+        let responseBody = {
+          error: "resource " + request.url + " cannot be deleted"
+        };
+        response.end(JSON.stringify(responseBody));
+      });
+    } else {
+      // Delete file
+      fs.unlinkSync("./public" + request.url);
+
+      // Update index.html
+      fs.readFile("./public/index.html", function(error, data) {
+        if (error) throw error;
+
+        // Copy index.html to memory
+        let indexHTML = data.toString();
+        // Find the element that matches the request.url
+        let split = indexHTML.split("\n");
+        for (let i = 0; i < split.length; i++) {
+          if (split[i].includes(request.url) === true) {
+            // Splice that element from the list
+            split.splice(i - 1, 3);
+          }
+        }
+        // Count all remaining elements
+        let count = 0;
+        for (let i = 0; i < split.length; i++) {
+          if (split[i].includes("<li>") === true) {
+            count++;
+          }
+        }
+        // Replace <h3>
+        for (let i = 0; i < split.length; i++) {
+          if (split[i].includes("<h3>") === true) {
+            split[i] = "    <h3>There are " + count + "</h3>";
+          }
+        }
+        // Rebuild index.html
+        indexHTML = split.join("\n");
+        console.log(indexHTML);
+        fs.writeFile("./public/index.html", indexHTML, function(error) {
+          if (error) throw error;
+          console.log("index.html updated successfully");
+        });
+      });
+
+      request.on("end", function() {
+        response.writeHead(200, { "Content-Type": "application/json" });
+        const responseBody = { success: "true" };
+        response.end(JSON.stringify(responseBody));
+      });
+
+      // Send success response
+      request.on("end", function() {
+        response.writeHead(200, { "Content-Type": "application/json" });
+        let responseBody = { success: true };
+        response.end(JSON.stringify(responseBody));
+      });
+    }
   }
 });
 
