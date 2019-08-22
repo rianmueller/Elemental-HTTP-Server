@@ -1,7 +1,40 @@
 const http = require("http");
 const fs = require("fs");
+const credentials = {
+  foo: "bar",
+  user: "pass",
+  guest: "guest"
+};
 
 const server = http.createServer(function(request, response) {
+  // AUTHENTICATION
+
+  if (!request.headers["authorization"]) {
+    response.statusCode = 401;
+    response.setHeader("WWW-Authenticate", 'Basic realm="Secure Area"');
+    response.end("<html><body>Not Authorized</body></html>");
+    return;
+  } else {
+    let buffer = new Buffer(
+      request.headers["authorization"].split(" ")[1],
+      "base64"
+    );
+    let plain_auth = buffer.toString();
+    if (
+      Object.entries(credentials).some(function(value) {
+        return value[0] + ":" + value[1] === plain_auth;
+      }) === true
+    ) {
+      response.statusCode = 200;
+      response.end("<html><body>Credentials accepted</body></html>");
+    } else {
+      response.statusCode = 401;
+      response.setHeader("WWW-Authenticate", 'Basic realm="Secure Area"');
+      response.end("<html><body>Not Authorized</body></html>");
+      return;
+    }
+  }
+
   // GET REQUESTS
 
   if (request.method === "GET") {
